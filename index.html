@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Lonas</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- jsPDF and jsPDF-AutoTable for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .btn {
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s ease, opacity 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background-color: #2563eb; /* Blue 600 */
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #1d4ed8; /* Blue 700 */
+        }
+        .btn-secondary {
+            background-color: #6b7280; /* Gray 500 */
+            color: white;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #4b5563; /* Gray 600 */
+        }
+        .btn-danger {
+            background-color: #dc2626; /* Red 600 */
+            color: white;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background-color: #b91c1c; /* Red 700 */
+        }
+        .btn-success {
+            background-color: #16a34a; /* Green 600 */
+            color: white;
+        }
+        .btn-success:hover:not(:disabled) {
+            background-color: #15803d; /* Green 700 */
+        }
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db; /* Gray 300 */
+            border-radius: 0.5rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #2563eb; /* Blue 600 */
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+        }
+        /* Custom scrollbar for the table container */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">
+                <i class="fas fa-ruler-combined mr-3 text-blue-600"></i>Gerenciador de Lonas Produzidas
+            </h1>
+            <p class="text-gray-500 mt-2">Adicione, visualize e salve sua lista de itens produzidos.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Form and Summary Column -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Form Card -->
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-3">
+                        <i class="fas fa-plus-circle mr-2 text-blue-500"></i>Adicionar Nova Lona
+                    </h2>
+                    <form id="add-lona-form" class="space-y-4">
+                        <div>
+                            <label for="cliente" class="block text-sm font-medium text-gray-600 mb-1">Cliente</label>
+                            <input type="text" id="cliente" class="input-field" placeholder="Nome do cliente">
+                        </div>
+                        <div>
+                            <label for="vendedor" class="block text-sm font-medium text-gray-600 mb-1">Vendedor</label>
+                            <input type="text" id="vendedor" class="input-field" placeholder="Nome do vendedor">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="largura" class="block text-sm font-medium text-gray-600 mb-1">Largura (m)</label>
+                                <input type="number" id="largura" step="0.01" class="input-field" placeholder="Ex: 1.50" required>
+                            </div>
+                            <div>
+                                <label for="comprimento" class="block text-sm font-medium text-gray-600 mb-1">Comprimento (m)</label>
+                                <input type="number" id="comprimento" step="0.01" class="input-field" placeholder="Ex: 2.20" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full mt-2 !py-3">
+                            <i class="fas fa-plus"></i>Adicionar Lona
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Summary Card -->
+                <div class="card p-6">
+                     <h2 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-3">
+                        <i class="fas fa-clipboard-list mr-2 text-green-500"></i>Resumo das Lonas
+                    </h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-lg">
+                            <span class="font-medium text-gray-600">Total de Lonas:</span>
+                            <span id="total-lonas" class="font-bold text-blue-600 text-xl">0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-lg">
+                            <span class="font-medium text-gray-600">Área Total (m²):</span>
+                            <span id="total-area" class="font-bold text-green-600 text-xl">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Column -->
+            <div class="lg:col-span-2 card p-6">
+                <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+                    <h2 class="text-xl font-semibold text-gray-700">
+                        <i class="fas fa-check-circle mr-2 text-gray-500"></i>Lonas Produzidas
+                    </h2>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="save-btn" class="btn btn-success" title="Salvar alterações no navegador">
+                            <i class="fas fa-save"></i>Salvar
+                        </button>
+                        <button id="pdf-btn" class="btn btn-secondary" title="Gerar relatório em PDF">
+                            <i class="fas fa-file-pdf"></i>Gerar PDF
+                        </button>
+                        <button id="clear-all-btn" class="btn btn-danger" title="Limpar toda a lista">
+                            <i class="fas fa-trash-alt"></i>Limpar Tudo
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Largura</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comprimento</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área (m²)</th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lonas-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Rows will be inserted here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                 <div id="empty-state" class="text-center py-16">
+                    <i class="fas fa-folder-open text-5xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 font-medium">Nenhuma lona na lista.</p>
+                    <p class="text-gray-400 text-sm">Adicione uma nova lona ou carregue os dados salvos.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const form = document.getElementById('add-lona-form');
+            const tableBody = document.getElementById('lonas-table-body');
+            const totalLonasEl = document.getElementById('total-lonas');
+            const totalAreaEl = document.getElementById('total-area');
+            const emptyStateEl = document.getElementById('empty-state');
+            const clearAllBtn = document.getElementById('clear-all-btn');
+            const pdfBtn = document.getElementById('pdf-btn');
+            const saveBtn = document.getElementById('save-btn');
+
+            const STORAGE_KEY = 'lonasApp_data';
+            let lonas = [];
+            const { jsPDF } = window.jspdf;
+
+            const loadLonas = () => {
+                const savedLonas = localStorage.getItem(STORAGE_KEY);
+                if (savedLonas) {
+                    lonas = JSON.parse(savedLonas);
+                } else {
+                    // Start with the default list if nothing is saved
+                    lonas = [
+                        { cliente: "s/c", vendedor: "eduardo", largura: 0.87, comprimento: 2.13 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.335, comprimento: 1.53 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.56, comprimento: 0.89 },
+                        { cliente: "LONA DA TV", vendedor: "LEO", largura: 4.12, comprimento: 2.13 },
+                        { cliente: "AD SERV ESTÉTICA LTDA", vendedor: "ANGÉLICA", largura: 0.57, comprimento: 1.77 },
+                        { cliente: "MD", vendedor: "RENATA", largura: 0.45, comprimento: 3.30 },
+                        { cliente: "MD", vendedor: "RENATA", largura: 1.87, comprimento: 3.30 },
+                        { cliente: "MD", vendedor: "RENATA", largura: 0.75, comprimento: 3.31 },
+                        { cliente: "AD SERV ESTÉTICA LTDA", vendedor: "ANGÉLICA", largura: 0.57, comprimento: 2.77 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.28, comprimento: 1.35 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 0.39, comprimento: 2.39 },
+                        { cliente: "LONA MD CAIS ESTELITA", vendedor: "MARCONDES", largura: 1.45, comprimento: 1.08 },
+                        { cliente: "LONA MD CAIS ESTELITA", vendedor: "MARCONDES", largura: 1.60, comprimento: 2.01 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.97, comprimento: 1.51 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 2.07, comprimento: 1.51 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.97, comprimento: 1.51 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 2.07, comprimento: 1.51 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.2, comprimento: 1.2 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.1, comprimento: 1.1 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.5, comprimento: 1.5 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.3, comprimento: 1.3 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.4, comprimento: 1.4 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.6, comprimento: 1.6 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.7, comprimento: 1.7 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.8, comprimento: 1.8 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.9, comprimento: 1.9 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 2.0, comprimento: 2.0 },
+                        { cliente: "s/c", vendedor: "eduardo", largura: 1.2, comprimento: 1.2 }
+                    ];
+                }
+            };
+
+            const calculateArea = (lona) => (parseFloat(lona.largura) || 0) * (parseFloat(lona.comprimento) || 0);
+
+            const updateSummary = () => {
+                const totalCount = lonas.length;
+                const totalArea = lonas.reduce((sum, lona) => sum + calculateArea(lona), 0);
+
+                totalLonasEl.textContent = totalCount;
+                totalAreaEl.textContent = totalArea.toFixed(2).replace('.', ',');
+                
+                const showEmptyState = totalCount === 0;
+                emptyStateEl.classList.toggle('hidden', !showEmptyState);
+                tableBody.parentElement.classList.toggle('hidden', showEmptyState);
+                clearAllBtn.classList.toggle('hidden', showEmptyState);
+                pdfBtn.classList.toggle('hidden', showEmptyState);
+                saveBtn.classList.toggle('hidden', showEmptyState);
+            };
+
+            const renderTable = () => {
+                tableBody.innerHTML = '';
+                lonas.forEach((lona, index) => {
+                    const area = calculateArea(lona);
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50 transition-colors';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${lona.cliente || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${lona.vendedor || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${Number(lona.largura).toFixed(2).replace('.', ',')} m</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${Number(lona.comprimento).toFixed(2).replace('.', ',')} m</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${area.toFixed(2).replace('.', ',')} m²</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                            <button class="btn btn-danger !p-2" data-index="${index}" title="Remover Lona">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+                updateSummary();
+            };
+
+            const handleAddLona = (e) => {
+                e.preventDefault();
+                const clienteInput = document.getElementById('cliente');
+                const vendedorInput = document.getElementById('vendedor');
+                const larguraInput = document.getElementById('largura');
+                const comprimentoInput = document.getElementById('comprimento');
+
+                const newLona = {
+                    cliente: clienteInput.value.trim(),
+                    vendedor: vendedorInput.value.trim(),
+                    largura: parseFloat(larguraInput.value),
+                    comprimento: parseFloat(comprimentoInput.value)
+                };
+
+                if (isNaN(newLona.largura) || isNaN(newLona.comprimento) || newLona.largura <= 0 || newLona.comprimento <= 0) {
+                    console.error("Valores de largura e comprimento inválidos.");
+                    return;
+                }
+                lonas.push(newLona);
+                renderTable();
+                form.reset();
+                clienteInput.focus();
+            };
+
+            const handleTableClick = (e) => {
+                const removeButton = e.target.closest('button.btn-danger');
+                if (removeButton) {
+                    const indexToRemove = parseInt(removeButton.dataset.index, 10);
+                    lonas.splice(indexToRemove, 1);
+                    renderTable();
+                }
+            };
+            
+            const handleClearAll = () => {
+                if (confirm('Tem a certeza de que deseja limpar toda a lista? Esta ação não pode ser desfeita.')) {
+                    lonas = [];
+                    renderTable();
+                }
+            };
+            
+            const handleSave = () => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(lonas));
+                const originalText = saveBtn.innerHTML;
+                saveBtn.innerHTML = `<i class="fas fa-check"></i> Salvo!`;
+                saveBtn.disabled = true;
+                setTimeout(() => {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }, 2000);
+            };
+
+            const handleGeneratePDF = () => {
+                const doc = new jsPDF();
+                doc.setFontSize(18);
+                doc.text("Relatório de Lonas Produzidas", 14, 22);
+                doc.setFontSize(11);
+                doc.setTextColor(100);
+                const date = new Date().toLocaleDateString('pt-BR');
+                doc.text(`Gerado em: ${date}`, 14, 30);
+
+                const tableColumn = ["Cliente", "Vendedor", "Largura (m)", "Comprimento (m)", "Área (m²)"];
+                const tableRows = [];
+
+                lonas.forEach(lona => {
+                    const area = calculateArea(lona);
+                    const lonaData = [
+                        lona.cliente || "-",
+                        lona.vendedor || "-",
+                        Number(lona.largura).toFixed(2).replace('.', ','),
+                        Number(lona.comprimento).toFixed(2).replace('.', ','),
+                        area.toFixed(2).replace('.', ',')
+                    ];
+                    tableRows.push(lonaData);
+                });
+
+                doc.autoTable({
+                    head: [tableColumn],
+                    body: tableRows,
+                    startY: 38,
+                    theme: 'grid',
+                    headStyles: { fillColor: [22, 160, 133] },
+                });
+
+                const finalY = doc.lastAutoTable.finalY || 50;
+                doc.setFontSize(12);
+                doc.text("Resumo:", 14, finalY + 15);
+                doc.setFontSize(10);
+                doc.text(`Total de Lonas: ${totalLonasEl.textContent}`, 14, finalY + 22);
+                doc.text(`Área Total: ${totalAreaEl.textContent} m²`, 14, finalY + 29);
+
+                doc.save('relatorio_lonas_produzidas.pdf');
+            };
+
+            // Attach event listeners
+            form.addEventListener('submit', handleAddLona);
+            tableBody.addEventListener('click', handleTableClick);
+            clearAllBtn.addEventListener('click', handleClearAll);
+            saveBtn.addEventListener('click', handleSave);
+            pdfBtn.addEventListener('click', handleGeneratePDF);
+
+            // Initial load and render
+            loadLonas();
+            renderTable();
+        });
+    </script>
+
+</body>
+</html>
